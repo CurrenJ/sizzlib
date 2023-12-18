@@ -2,6 +2,7 @@ package grill24.sizzlib;
 
 import com.mojang.brigadier.context.CommandContext;
 import grill24.sizzlib.component.*;
+import grill24.sizzlib.persistence.ExamplePersistable;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.command.argument.ItemStackArgument;
@@ -13,7 +14,7 @@ public class SizzLibClient implements ClientModInitializer {
 
     private static ModComponentRegistry modComponentRegistry;
 
-    private enum MyEnum {A, B, C}
+    public enum MyEnum {A, B, C}
 
     ;
     @CommandOption
@@ -22,9 +23,16 @@ public class SizzLibClient implements ClientModInitializer {
     @CommandOption(readOnly = true)
     private static String myReadOnlyField = "READ-ONLY!";
 
+    private ExamplePersistable examplePersistable;
+
+    public static String DATA_DIR = "data/sizzLib";
+
     @Override
     public void onInitializeClient() {
+        examplePersistable = new ExamplePersistable();
+
         modComponentRegistry = new ModComponentRegistry(SizzLibClient.class);
+        modComponentRegistry.registerComponent(examplePersistable);
         modComponentRegistry.registerComponents();
     }
 

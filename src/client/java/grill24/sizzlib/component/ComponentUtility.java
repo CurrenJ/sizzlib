@@ -13,6 +13,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.function.Function;
 
 public class ComponentUtility {
 
@@ -104,25 +105,30 @@ public class ComponentUtility {
         return correctParameters;
     }
 
-    public static Field[] getCommandOptionFields(Class<?> clazz) {
-        Field[] fields = clazz.getDeclaredFields();
+    public static Field[] getFieldsWithAnnotation(Class<?> componentClass, Class<? extends Annotation> annotationClass) {
+        return getFieldsWithAnnotation(componentClass, annotationClass, (field) -> true);
+    }
+
+    public static Field[] getFieldsWithAnnotation(Class<?> componentClass, Class<? extends Annotation> annotationClass, Function<Field, Boolean> isValidField) {
+        Field[] fields = componentClass.getDeclaredFields();
         return Arrays.stream(fields)
-                .filter(field -> field.isAnnotationPresent(CommandOption.class))
+                .filter(field -> field.isAnnotationPresent(annotationClass) && isValidField.apply(field))
                 .toArray(Field[]::new);
     }
 
-    public static Method[] getCommandActionMethods(Class<?> clazz) {
-        Method[] methods = clazz.getDeclaredMethods();
+    public static Method[] getMethodsWithAnnotation(Class<?> componentClass, Class<? extends Annotation> annotationClass) {
+        return getMethodsWithAnnotation(componentClass, annotationClass, (method) -> true);
+    }
+
+    public static Method[] getMethodsWithAnnotation(Class<?> componentClass, Class<? extends Annotation> annotationClass, Function<Method, Boolean> isValidMethodSignature) {
+        Method[] methods = componentClass.getDeclaredMethods();
         return Arrays.stream(methods)
-                .filter(method -> method.isAnnotationPresent(CommandAction.class))
+                .filter(method -> method.isAnnotationPresent(annotationClass) && isValidMethodSignature.apply(method))
                 .toArray(Method[]::new);
     }
 
-    public static Method[] getClientTickMethods(Class<?> clazz) {
-        Method[] methods = clazz.getDeclaredMethods();
-        return Arrays.stream(methods)
-                .filter(method -> method.isAnnotationPresent(ClientTick.class) && hasCorrectClientTickParameterSignature(method))
-                .toArray(Method[]::new);
+    public static Method[] getClientTickMethods(Class<?> componentClass) {
+        return getMethodsWithAnnotation(componentClass, ClientTick.class, ComponentUtility::hasCorrectClientTickParameterSignature);
     }
 
     private static boolean hasCorrectClientTickParameterSignature(Method method) {
@@ -168,6 +174,10 @@ public class ComponentUtility {
 
     public static Object getEnumValueFromCommandArgument(CommandContext commandContext, String argKey, Class enumClass) {
         return Enum.valueOf((Class<Enum>) enumClass, ComponentUtility.convertCamelToSnake((String) commandContext.getArgument(argKey, String.class)).toUpperCase());
+    }
+
+    public static Object getEnumValueFromSerializedString(String str, Class enumClass) {
+        return Enum.valueOf((Class<Enum>) enumClass, str);
     }
 
     public static SuggestionProvider getSuggestionProviderForEnum(Class enumClass) {

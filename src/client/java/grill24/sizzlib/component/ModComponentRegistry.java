@@ -11,6 +11,9 @@ import grill24.sizzlib.IDefaultPosArgumentMixin;
 import grill24.sizzlib.component.accessor.GetCommandArgumentValue;
 import grill24.sizzlib.component.accessor.GetFieldValue;
 import grill24.sizzlib.component.accessor.SetNewFieldValue;
+import grill24.sizzlib.persistence.IPersistable;
+import grill24.sizzlib.persistence.PersistenceManager;
+import grill24.sizzlib.persistence.Persists;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -164,6 +167,8 @@ public class ModComponentRegistry {
     }
 
     private void registerComponentCommands() {
+        commandTreeRoot = null;
+
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             if (commandTreeRoot == null && commandRootComponent != null) {
                 LiteralArgumentBuilder<FabricClientCommandSource> rootCommand = buildCommandsFromAnnotations(commandRootComponent, registryAccess, commandTreeRoot, supportedArgumentTypes);
@@ -190,6 +195,7 @@ public class ModComponentRegistry {
      * Register tick events for all methods with {@link ClientTick} annotations.
      */
     private void registerTickEvents() {
+        this.clientTickMethods = new ArrayList<>();
         for (ComponentDto component : this.components) {
             for (Method method : ComponentUtility.getClientTickMethods(component.clazz)) {
                 this.clientTickMethods.add(new ClientTickMethodDto(component.instance, method, method.getAnnotation(ClientTick.class).value()));
@@ -210,6 +216,9 @@ public class ModComponentRegistry {
      * Register screen tick events for all methods with {@link ScreenTick} or {@link ScreenInit} annotations..
      */
     private void registerScreenTickEvents() {
+        this.screenInitMethods = new ArrayList<>();
+        this.screenTickMethods = new ArrayList<>();
+
         for (ComponentDto component : this.components) {
             for (Method method : ComponentUtility.getScreenTickMethods(component.clazz)) {
                 this.screenTickMethods.add(new ScreenMethodDto(component.instance, method));
@@ -306,7 +315,7 @@ public class ModComponentRegistry {
         Class<?> clazz = component.clazz;
 
         List<Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>>> commands = new ArrayList<>();
-        for (Field field : ComponentUtility.getCommandOptionFields(clazz)) {
+        for (Field field : ComponentUtility.getFieldsWithAnnotation(clazz, CommandOption.class)) {
             Class<?> fieldClass = field.getType();
             CommandOption optionAnnotation = field.getAnnotation(CommandOption.class);
             String optionKey = optionAnnotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(field.getName()) : optionAnnotation.value();
@@ -366,6 +375,10 @@ public class ModComponentRegistry {
                         field.setAccessible(true);
                         field.set(component.instance, value);
                     }
+
+                    if(field.isAnnotationPresent(Persists.class) && component.instance instanceof IPersistable persistable) {
+                        PersistenceManager.save(persistable);
+                    }
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     e.printStackTrace();
                 }
@@ -399,18 +412,20 @@ public class ModComponentRegistry {
                     ComponentUtility.print(context, optionKey + "=" + getFieldValue.run(component.instance));
                     return 1;
                 });
-            } else if (field.getType().isEnum()) {
-                // If the option is an enum, increment the enum to the next value.
-                noOptionProvidedFunc = (context -> {
-                    try {
-                        setNewFieldValue.set(context, ComponentUtility.incrementEnum((Enum) getFieldValue.run(component.instance)));
-                        ComponentUtility.print(context, optionKey + "=" + getFieldValue.run(component.instance));
-                        return 1;
-                    } catch (IllegalAccessException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
             }
+            // Don't like this feature. Not useful in practice.
+//            else if (field.getType().isEnum()) {
+//                // If the option is an enum, increment the enum to the next value.
+//                noOptionProvidedFunc = (context -> {
+//                    try {
+//                        setNewFieldValue.set(context, ComponentUtility.incrementEnum((Enum) getFieldValue.run(component.instance)));
+//                        ComponentUtility.print(context, optionKey + "=" + getFieldValue.run(component.instance));
+//                        return 1;
+//                    } catch (IllegalAccessException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                });
+//            }
 
 
             LiteralArgumentBuilder<FabricClientCommandSource> subCommand = ClientCommandManager.literal(optionKey);
@@ -444,7 +459,7 @@ public class ModComponentRegistry {
 
         // Build command arguments
         List<Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>>> commands = new ArrayList<>();
-        for (Method method : ComponentUtility.getCommandActionMethods(clazz)) {
+        for (Method method : ComponentUtility.getMethodsWithAnnotation(clazz, CommandAction.class)) {
             CommandAction actionAnnotation = method.getAnnotation(CommandAction.class);
             Parameter[] parameters = method.getParameters();
             String actionKey = actionAnnotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(method.getName()) : actionAnnotation.value();
