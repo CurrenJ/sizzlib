@@ -5,6 +5,7 @@ import grill24.sizzlib.component.*;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.command.argument.ItemStackArgument;
+import net.minecraft.item.Item;
 import net.minecraft.util.math.BlockPos;
 
 @Command("sizzLib")
@@ -25,12 +26,17 @@ public class SizzLibClient implements ClientModInitializer {
     }
 
     @CommandAction
-    public static void item(CommandContext<FabricClientCommandSource> commandContext, ItemStackArgument itemStack) {
+    public static void item(CommandContext<FabricClientCommandSource> commandContext, Item item) {
+        ComponentUtility.print(commandContext, item.toString());
+    }
+
+    @CommandAction
+    public static void itemStackArgument(CommandContext<FabricClientCommandSource> commandContext, ItemStackArgument itemStack) {
         ComponentUtility.print(commandContext, itemStack.getItem().toString());
     }
 
     @CommandAction
-    public static void string(CommandContext<FabricClientCommandSource> commandContext, String string) {
+    public static void stringArgument(CommandContext<FabricClientCommandSource> commandContext, String string) {
         ComponentUtility.print(commandContext, string);
     }
 

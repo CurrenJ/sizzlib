@@ -128,7 +128,7 @@ public class ModComponentRegistry {
         addSupportedActionTargetType(new SupportedCommandArgumentType(
                 BlockPos.class, commandRegistryAccess -> BlockPosArgumentType.blockPos(),
                 (commandContext, key) -> {
-                    PosArgument pos = (PosArgument) commandContext.getArgument("blockPos", PosArgument.class);
+                    PosArgument pos = (PosArgument) commandContext.getArgument(key, PosArgument.class);
                     if (pos instanceof DefaultPosArgument defaultPosArgument && commandContext.getSource() instanceof FabricClientCommandSource fabricClientCommandSource) {
                         Position position = ((IDefaultPosArgumentMixin) defaultPosArgument).toAbsolutePos(fabricClientCommandSource.getPosition());
                         BlockPos blockPos = BlockPos.ofFloored(position);
