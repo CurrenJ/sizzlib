@@ -1,11 +1,10 @@
 package grill24.sizzlib.persistence;
 
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.NbtTagSizeTracker;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -16,10 +15,8 @@ public class PersistenceManager {
             modDataDirectory.toFile().mkdirs();
         }
 
-        try {
-            File file = persistable.getFile();
-            NbtCompound tag = persistable.writeToNBT();
-            NbtIo.writeCompressed(tag, file.toPath());
+        try (FileWriter fileWriter = new FileWriter(persistable.getFile())) {
+            fileWriter.write(persistable.toJson());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -29,8 +26,7 @@ public class PersistenceManager {
         try {
             File file = persistable.getFile();
             if (file.exists()) {
-                NbtCompound tag = NbtIo.readCompressed(file.toPath(), NbtTagSizeTracker.ofUnlimitedBytes());
-                persistable.readFromNBT(tag);
+                persistable.fromJson(new String(Files.readAllBytes(file.toPath())));
             }
         } catch (Exception e) {
             e.printStackTrace();

@@ -11,11 +11,11 @@ public class ExamplePersistable extends Persistable {
 
     @Persists
     @CommandOption
-    private String myStringField;
+    protected String myStringField;
 
     @Persists
     @CommandOption
-    private SizzLibClient.MyEnum myEnumField;
+    protected SizzLibClient.MyEnum myEnumField;
 
     public ExamplePersistable() {
         PersistenceManager.load(this);
