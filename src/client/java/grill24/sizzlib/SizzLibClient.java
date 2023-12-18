@@ -17,7 +17,10 @@ public class SizzLibClient implements ClientModInitializer {
 
     ;
     @CommandOption
-    private static MyEnum myEnumInstance;
+    private static MyEnum myEnumField;
+
+    @CommandOption(readOnly = true)
+    private static String myReadOnlyField = "READ-ONLY!";
 
     @Override
     public void onInitializeClient() {
@@ -46,7 +49,7 @@ public class SizzLibClient implements ClientModInitializer {
     }
 
     @CommandAction
-    public static void myEnum(CommandContext<FabricClientCommandSource> commandContext, MyEnum myEnumInstance) {
+    public static void myEnumAction(CommandContext<FabricClientCommandSource> commandContext, MyEnum myEnumInstance) {
         ComponentUtility.print(commandContext, myEnumInstance.toString());
     }
 

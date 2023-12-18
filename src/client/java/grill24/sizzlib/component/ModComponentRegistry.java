@@ -335,19 +335,25 @@ public class ModComponentRegistry {
             SuggestionProvider<FabricClientCommandSource> suggestionProvider = null;
             final GetCommandArgumentValue getCommandArgumentValue;
             final SetNewFieldValue<FabricClientCommandSource> setNewFieldValue;
-            if (supportedActionArgumentTypes.containsKey(field.getType())) {
-                // Generic case :3 using our lovely SupportedCommandArgumentType infrastructure
-                SupportedCommandArgumentType supportedCommandArgumentType = supportedActionArgumentTypes.get(field.getType());
-                argumentType = supportedCommandArgumentType.getArgumentType.apply(commandRegistryAccess);
-                getCommandArgumentValue = supportedCommandArgumentType.getArgumentValue();
-            } else if (fieldClass.isEnum()) {
-                // We can't check if our types are enums by comparing the hashed Class to Enum.class, unfortunately.
-                // So enums are a special case and are handled explicitly.
-                argumentType = StringArgumentType.string();
-                suggestionProvider = ComponentUtility.getSuggestionProviderForEnum(fieldClass);
-                getCommandArgumentValue = (context, key) -> ComponentUtility.getEnumValueFromCommandArgument(context, key, fieldClass);
+
+            // If not read-only, set up our command arguments.
+            if(!optionAnnotation.readOnly()) {
+                if (supportedActionArgumentTypes.containsKey(field.getType())) {
+                    // Generic case :3 using our lovely SupportedCommandArgumentType infrastructure
+                    SupportedCommandArgumentType supportedCommandArgumentType = supportedActionArgumentTypes.get(field.getType());
+                    argumentType = supportedCommandArgumentType.getArgumentType.apply(commandRegistryAccess);
+                    getCommandArgumentValue = supportedCommandArgumentType.getArgumentValue();
+                } else if (fieldClass.isEnum()) {
+                    // We can't check if our types are enums by comparing the hashed Class to Enum.class, unfortunately.
+                    // So enums are a special case and are handled explicitly.
+                    argumentType = StringArgumentType.string();
+                    suggestionProvider = ComponentUtility.getSuggestionProviderForEnum(fieldClass);
+                    getCommandArgumentValue = (context, key) -> ComponentUtility.getEnumValueFromCommandArgument(context, key, fieldClass);
+                } else {
+                    // We messed up!
+                    getCommandArgumentValue = null;
+                }
             } else {
-                // We messed up!
                 getCommandArgumentValue = null;
             }
 
@@ -356,7 +362,7 @@ public class ModComponentRegistry {
                 try {
                     if (setterMethod != null) {
                         setterMethod.invoke(component.instance, value);
-                    } else {
+                    } else if(!optionAnnotation.readOnly()) {
                         field.setAccessible(true);
                         field.set(component.instance, value);
                     }

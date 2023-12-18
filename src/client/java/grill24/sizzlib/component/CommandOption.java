@@ -27,5 +27,10 @@ public @interface CommandOption {
      * Specify a custom getter, otherwise reflection will be used to get the field. This is only used for printing components and toggling the value of booleans at the moment. Could be used for other things in the future.
      */
     String getter() default "";
+
+    /**
+     * Make this field read-only. Can also do this by passing a setter method that doesn't do anything.
+     */
+    boolean readOnly() default false;
 }
 
