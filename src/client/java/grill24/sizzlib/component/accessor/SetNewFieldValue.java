@@ -5,6 +5,6 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 @FunctionalInterface
 public interface SetNewFieldValue<S> {
-    // Returns the new field value to be set, given a command context. This is used for setting the value of a field when a command is run.
-    Object run(CommandContext<S> context, Object value) throws CommandSyntaxException;
+    // Sets the value of a field.
+    void set(CommandContext<S> context, Object value) throws CommandSyntaxException;
 }

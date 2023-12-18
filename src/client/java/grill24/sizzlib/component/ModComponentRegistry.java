@@ -6,12 +6,10 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import com.mojang.brigadier.suggestion.Suggestions;
-import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import grill24.sizzlib.IDefaultPosArgumentMixin;
+import grill24.sizzlib.component.accessor.GetCommandArgumentValue;
 import grill24.sizzlib.component.accessor.GetFieldValue;
-import grill24.sizzlib.component.accessor.GetNewFieldValue;
 import grill24.sizzlib.component.accessor.SetNewFieldValue;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -22,7 +20,10 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.command.CommandRegistryAccess;
-import net.minecraft.command.argument.ItemStackArgumentType;
+import net.minecraft.command.argument.*;
+import net.minecraft.item.Item;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Position;
 import oshi.util.tuples.Pair;
 
 import java.lang.reflect.Field;
@@ -33,7 +34,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 public class ModComponentRegistry {
     private record ComponentDto(Object instance, Class<?> clazz) {
@@ -54,6 +55,13 @@ public class ModComponentRegistry {
 
     private CommandTreeNode commandTreeRoot;
     private ComponentDto commandRootComponent;
+
+    private record SupportedCommandArgumentType(Class parsedArgumentClass,
+                                                Function<CommandRegistryAccess, ? extends ArgumentType> getArgumentType,
+                                                GetCommandArgumentValue getArgumentValue) {
+    }
+
+    private HashMap<Class, SupportedCommandArgumentType> supportedArgumentTypes;
 
     private int tickCounter;
 
@@ -93,6 +101,52 @@ public class ModComponentRegistry {
         clientTickMethods = new ArrayList<>();
         screenTickMethods = new ArrayList<>();
         screenInitMethods = new ArrayList<>();
+
+        supportedArgumentTypes = new HashMap<>();
+
+        // ItemStackArgument
+        addSupportedActionTargetType(new SupportedCommandArgumentType(
+                ItemStackArgument.class,
+                ItemStackArgumentType::itemStack,
+                ItemStackArgumentType::getItemStackArgument));
+
+        // Item
+        addSupportedActionTargetType(new SupportedCommandArgumentType(
+                Item.class,
+                ItemStackArgumentType::itemStack,
+                (commandContext, key) -> {
+                    return ItemStackArgumentType.getItemStackArgument(commandContext, key).getItem();
+                }));
+
+        // String
+        addSupportedActionTargetType(new SupportedCommandArgumentType(
+                String.class,
+                commandRegistryAccess -> StringArgumentType.string(),
+                StringArgumentType::getString));
+
+        // BlockPos
+        addSupportedActionTargetType(new SupportedCommandArgumentType(
+                BlockPos.class, commandRegistryAccess -> BlockPosArgumentType.blockPos(),
+                (commandContext, key) -> {
+                    PosArgument pos = (PosArgument) commandContext.getArgument("blockPos", PosArgument.class);
+                    if (pos instanceof DefaultPosArgument defaultPosArgument && commandContext.getSource() instanceof FabricClientCommandSource fabricClientCommandSource) {
+                        Position position = ((IDefaultPosArgumentMixin) defaultPosArgument).toAbsolutePos(fabricClientCommandSource.getPosition());
+                        BlockPos blockPos = BlockPos.ofFloored(position);
+
+                        return blockPos;
+                    }
+                    return null;
+                }));
+
+        // Boolean
+        addSupportedActionTargetType(new SupportedCommandArgumentType(
+                Boolean.class, commandRegistryAccess -> BoolArgumentType.bool(),
+                BoolArgumentType::getBool
+        ));
+    }
+
+    public <T extends ArgumentType> void addSupportedActionTargetType(SupportedCommandArgumentType supportedCommandArgumentType) {
+        supportedArgumentTypes.put(supportedCommandArgumentType.parsedArgumentClass, supportedCommandArgumentType);
     }
 
     public void registerComponent(Object component) {
@@ -112,13 +166,13 @@ public class ModComponentRegistry {
     private void registerComponentCommands() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             if (commandTreeRoot == null && commandRootComponent != null) {
-                LiteralArgumentBuilder<FabricClientCommandSource> rootCommand = buildCommandsFromAnnotations(commandRootComponent, registryAccess, commandTreeRoot);
+                LiteralArgumentBuilder<FabricClientCommandSource> rootCommand = buildCommandsFromAnnotations(commandRootComponent, registryAccess, commandTreeRoot, supportedArgumentTypes);
                 commandTreeRoot = new CommandTreeNode(ComponentUtility.getCommandKey(commandRootComponent.clazz), rootCommand);
             }
 
             for (ComponentDto component : this.components) {
                 if (ComponentUtility.hasCustomClassAnnotation(component.clazz, Command.class)) {
-                    LiteralArgumentBuilder<FabricClientCommandSource> command = buildCommandsFromAnnotations(component, registryAccess, commandTreeRoot);
+                    LiteralArgumentBuilder<FabricClientCommandSource> command = buildCommandsFromAnnotations(component, registryAccess, commandTreeRoot, supportedArgumentTypes);
 
                     commandTreeRoot.command.then(command);
 
@@ -202,7 +256,7 @@ public class ModComponentRegistry {
     /**
      * Build command from an object component whose class has the {@link Command} annotation.
      */
-    private static LiteralArgumentBuilder<FabricClientCommandSource> buildCommandsFromAnnotations(ComponentDto component, CommandRegistryAccess commandRegistryAccess, CommandTreeNode commandRoot) {
+    private static LiteralArgumentBuilder<FabricClientCommandSource> buildCommandsFromAnnotations(ComponentDto component, CommandRegistryAccess commandRegistryAccess, CommandTreeNode commandRoot, HashMap<Class, SupportedCommandArgumentType> supportedActionArgumentTypes) {
         MinecraftClient client = MinecraftClient.getInstance();
 
         if (client != null) {
@@ -222,11 +276,11 @@ public class ModComponentRegistry {
 
                 LiteralArgumentBuilder<FabricClientCommandSource> command = ComponentUtility.getCommandOrElse(commandRoot, commandKey, (key) -> ClientCommandManager.literal(commandKey)).executes(printInstance);
 
-                for (Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromFields(component)) {
+                for (Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromFields(component, commandRegistryAccess, supportedActionArgumentTypes)) {
                     attachSubCommandToParentCommand(commandRoot, subCommandData.getA().parentKey(), command, subCommandData.getB());
                 }
 
-                for (Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromMethods(component, commandRegistryAccess)) {
+                for (Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromMethods(component, commandRegistryAccess, supportedActionArgumentTypes)) {
                     attachSubCommandToParentCommand(commandRoot, subCommandData.getA().parentKey(), command, subCommandData.getB());
                 }
 
@@ -248,7 +302,7 @@ public class ModComponentRegistry {
     /**
      * Build commands from fields with the {@link CommandOption} in an object's class.
      */
-    private static List<Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromFields(ComponentDto component) {
+    private static List<Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromFields(ComponentDto component, CommandRegistryAccess commandRegistryAccess, HashMap<Class, SupportedCommandArgumentType> supportedActionArgumentTypes) {
         Class<?> clazz = component.clazz;
 
         List<Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>>> commands = new ArrayList<>();
@@ -277,6 +331,40 @@ public class ModComponentRegistry {
                 }
             } else getterMethod = null;
 
+            ArgumentType<?> argumentType = null;
+            SuggestionProvider<FabricClientCommandSource> suggestionProvider = null;
+            final GetCommandArgumentValue getCommandArgumentValue;
+            final SetNewFieldValue<FabricClientCommandSource> setNewFieldValue;
+            if (supportedActionArgumentTypes.containsKey(field.getType())) {
+                // Generic case :3 using our lovely SupportedCommandArgumentType infrastructure
+                SupportedCommandArgumentType supportedCommandArgumentType = supportedActionArgumentTypes.get(field.getType());
+                argumentType = supportedCommandArgumentType.getArgumentType.apply(commandRegistryAccess);
+                getCommandArgumentValue = supportedCommandArgumentType.getArgumentValue();
+            } else if (fieldClass.isEnum()) {
+                // We can't check if our types are enums by comparing the hashed Class to Enum.class, unfortunately.
+                // So enums are a special case and are handled explicitly.
+                argumentType = StringArgumentType.string();
+                suggestionProvider = ComponentUtility.getSuggestionProviderForEnum(fieldClass);
+                getCommandArgumentValue = (context, key) -> ComponentUtility.getEnumValueFromCommandArgument(context, key, fieldClass);
+            } else {
+                // We messed up!
+                getCommandArgumentValue = null;
+            }
+
+            // Set the value of the field in the component instance via reflection, If a setter method is specified, use that instead.
+            setNewFieldValue = (context, value) -> {
+                try {
+                    if (setterMethod != null) {
+                        setterMethod.invoke(component.instance, value);
+                    } else {
+                        field.setAccessible(true);
+                        field.set(component.instance, value);
+                    }
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    e.printStackTrace();
+                }
+            };
+
             // Get the value of the field from the component instance via reflection. If a getter method is specified, use that instead.
             final GetFieldValue getFieldValue = context -> {
                 try {
@@ -298,52 +386,23 @@ public class ModComponentRegistry {
                 return 1;
             });
 
-            ArgumentType<?> argumentType = null;
-            SuggestionProvider<FabricClientCommandSource> suggestionProvider = null;
-            final GetNewFieldValue<FabricClientCommandSource> getNewFieldValue;
-            final SetNewFieldValue<FabricClientCommandSource> setNewFieldValue;
-            if (fieldClass.isEnum()) {
-                argumentType = StringArgumentType.string();
-                suggestionProvider = new SuggestionProvider<FabricClientCommandSource>() {
-                    @Override
-                    public CompletableFuture<Suggestions> getSuggestions(CommandContext<FabricClientCommandSource> context, SuggestionsBuilder builder) throws CommandSyntaxException {
-                        for (Object enumConstant : fieldClass.getEnumConstants()) {
-                            builder.suggest(ComponentUtility.convertSnakeToCamel(enumConstant.toString()));
-                        }
-                        return builder.buildFuture();
-                    }
-                };
-
-                getNewFieldValue = context -> Enum.valueOf((Class<Enum>) fieldClass, ComponentUtility.convertCamelToSnake(context.getArgument(optionKey, String.class)).toUpperCase());
-            } else if (field.getType() == boolean.class) {
-                argumentType = BoolArgumentType.bool();
-
-                getNewFieldValue = context -> context.getArgument(optionKey, boolean.class);
-            } else {
-                getNewFieldValue = null;
-            }
-
-            setNewFieldValue = (context, value) -> {
-                try {
-                    if (setterMethod != null) {
-                        setterMethod.invoke(component.instance, value);
-                    } else {
-                        field.setAccessible(true);
-                        field.set(component.instance, value);
-                    }
-                    return 1;
-                } catch (IllegalAccessException | InvocationTargetException e) {
-                    e.printStackTrace();
-                    return -1;
-                }
-            };
-
             if (field.getType() == boolean.class) {
                 // If the option is a boolean, we want to toggle the value of the field when no specific option is provided.
                 noOptionProvidedFunc = (context -> {
-                    setNewFieldValue.run(context, !(boolean) getFieldValue.run(component.instance));
+                    setNewFieldValue.set(context, !(boolean) getFieldValue.run(component.instance));
                     ComponentUtility.print(context, optionKey + "=" + getFieldValue.run(component.instance));
                     return 1;
+                });
+            } else if (field.getType().isEnum()) {
+                // If the option is an enum, increment the enum to the next value.
+                noOptionProvidedFunc = (context -> {
+                    try {
+                        setNewFieldValue.set(context, ComponentUtility.incrementEnum((Enum) getFieldValue.run(component.instance)));
+                        ComponentUtility.print(context, optionKey + "=" + getFieldValue.run(component.instance));
+                        return 1;
+                    } catch (IllegalAccessException e) {
+                        throw new RuntimeException(e);
+                    }
                 });
             }
 
@@ -351,14 +410,14 @@ public class ModComponentRegistry {
             LiteralArgumentBuilder<FabricClientCommandSource> subCommand = ClientCommandManager.literal(optionKey);
             subCommand = subCommand.executes(noOptionProvidedFunc);
 
-            if (argumentType != null && getNewFieldValue != null && setNewFieldValue != null) {
+            if (argumentType != null && getCommandArgumentValue != null && setNewFieldValue != null) {
 
                 RequiredArgumentBuilder<FabricClientCommandSource, ?> argument = ClientCommandManager.argument(optionKey, argumentType);
                 if (suggestionProvider != null)
                     argument = argument.suggests(suggestionProvider);
 
                 argument.executes((context) -> {
-                    setNewFieldValue.run(context, getNewFieldValue.run(context));
+                    setNewFieldValue.set(context, getCommandArgumentValue.get(context, optionKey));
                     return 1;
                 });
                 subCommand.then(argument);
@@ -372,31 +431,59 @@ public class ModComponentRegistry {
     /**
      * Build commands from methods with the {@link CommandAction} in an object's class.
      */
-    private static List<Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromMethods(ComponentDto component, CommandRegistryAccess commandRegistryAccess) {
+    private static List<Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromMethods(ComponentDto component, CommandRegistryAccess commandRegistryAccess, HashMap<Class, SupportedCommandArgumentType> supportedArgumentTypes) {
         Class<?> clazz = component.clazz;
         MinecraftClient client = MinecraftClient.getInstance();
         assert client != null;
 
+        // Build command arguments
         List<Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>>> commands = new ArrayList<>();
         for (Method method : ComponentUtility.getCommandActionMethods(clazz)) {
             CommandAction actionAnnotation = method.getAnnotation(CommandAction.class);
+            Parameter[] parameters = method.getParameters();
             String actionKey = actionAnnotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(method.getName()) : actionAnnotation.value();
 
+            RequiredArgumentBuilder<FabricClientCommandSource, ?> commandArgument = null;
+            for (int i = 0; i < parameters.length; i++) {
+                Parameter parameter = parameters[i];
+                Class argumentType = parameter.getType();
+                String argumentName = parameter.getName();
+
+                if (supportedArgumentTypes.containsKey(argumentType)) {
+                    SupportedCommandArgumentType supportedCommandArgumentType = supportedArgumentTypes.get(argumentType);
+                    commandArgument = ClientCommandManager.argument(argumentName, supportedCommandArgumentType.getArgumentType.apply(commandRegistryAccess));
+                } else if (argumentType.isEnum()) {
+                    commandArgument = ClientCommandManager.argument(argumentName, StringArgumentType.string()).suggests(ComponentUtility.getSuggestionProviderForEnum(argumentType));
+                } else if (argumentType != MinecraftClient.class && argumentType != CommandContext.class) {
+                    throw new RuntimeException("Unsupported argument type: " + argumentType.getName());
+                }
+            }
+
+            // Build command execution function
             com.mojang.brigadier.Command<FabricClientCommandSource> action = (context) -> {
                 try {
-                    Parameter[] parameters = method.getParameters();
+                    Object[] parameterInstances = new Object[parameters.length];
+                    for (int i = 0; i < parameters.length; i++) {
+                        Parameter parameter = parameters[i];
+
+                        Class argType = parameter.getType();
+                        String argName = parameter.getName();
+
+                        if (parameter.getType() == MinecraftClient.class) {
+                            parameterInstances[i] = client;
+                        } else if (parameter.getType() == CommandContext.class) {
+                            parameterInstances[i] = context;
+                        } else if (supportedArgumentTypes.containsKey(argType)) {
+                            parameterInstances[i] = supportedArgumentTypes.get(argType).getArgumentValue.get(context, argName);
+                        } else if (argType.isEnum()) {
+                            parameterInstances[i] = ComponentUtility.getEnumValueFromCommandArgument(context, argName, argType);
+                        } else {
+                            throw new Exception("Invalid parameters for subCommand action method: " + method.getName());
+                        }
+                    }
+
                     method.setAccessible(true);
-                    // Yeesh.
-                    if (parameters.length == 2 && parameters[0].getType() == MinecraftClient.class && parameters[1].getType() == CommandContext.class)
-                        method.invoke(component.instance, client, context);
-                    else if (parameters.length == 1 && parameters[0].getType() == CommandContext.class)
-                        method.invoke(component.instance, context);
-                    else if (parameters.length == 1 && parameters[0].getType() == MinecraftClient.class)
-                        method.invoke(component.instance, client);
-                    else if (parameters.length == 0)
-                        method.invoke(component.instance);
-                    else
-                        throw new Exception("Invalid parameters for subCommand action method: " + method.getName());
+                    method.invoke(component.instance, parameterInstances);
                     return 1;
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -404,23 +491,7 @@ public class ModComponentRegistry {
                 }
             };
 
-            RequiredArgumentBuilder<FabricClientCommandSource, ?> commandArgument = null;
-            if (actionAnnotation.arguments().length == actionAnnotation.argumentKeys().length) {
-                for (int i = 0; i < actionAnnotation.arguments().length; i++) {
-                    Class<? extends ArgumentType> argumentType = actionAnnotation.arguments()[i];
-                    String argumentKey = actionAnnotation.argumentKeys()[i];
-
-                    if (argumentType == ItemStackArgumentType.class)
-                        commandArgument = ClientCommandManager.argument(argumentKey, ItemStackArgumentType.itemStack(commandRegistryAccess));
-                    else if (argumentType == StringArgumentType.class)
-                        commandArgument = ClientCommandManager.argument(argumentKey, StringArgumentType.string());
-                    else
-                        throw new RuntimeException("Unsupported argument type: " + argumentType.getName());
-                }
-            } else {
-                throw new RuntimeException("Number of argument types does not match number of argument keys for subCommand action method: " + method.getName());
-            }
-
+            // Build the command itself
             LiteralArgumentBuilder<FabricClientCommandSource> subCommand = ClientCommandManager.literal(actionKey);
             if (commandArgument != null)
                 subCommand = subCommand.then(commandArgument.executes(action));

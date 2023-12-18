@@ -2,6 +2,7 @@ package grill24.sizzlib.component;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
@@ -163,5 +164,31 @@ public class ComponentUtility {
 
     public static void print(MinecraftClient client, String message) {
         client.inGameHud.getChatHud().addMessage(Text.of(message));
+    }
+
+    public static Object getEnumValueFromCommandArgument(CommandContext commandContext, String argKey, Class enumClass) {
+        return Enum.valueOf((Class<Enum>) enumClass, ComponentUtility.convertCamelToSnake((String) commandContext.getArgument(argKey, String.class)).toUpperCase());
+    }
+
+    public static SuggestionProvider getSuggestionProviderForEnum(Class enumClass) {
+        return (SuggestionProvider<FabricClientCommandSource>) (context, builder) -> {
+            for (Object enumConstant : enumClass.getEnumConstants()) {
+                builder.suggest(ComponentUtility.convertSnakeToCamel(enumConstant.toString()));
+            }
+            return builder.buildFuture();
+        };
+    }
+
+    public static <T extends Enum<T>> T incrementEnum(T inputEnum) throws IllegalAccessException {
+        if (inputEnum == null) {
+            throw new IllegalAccessException("Iput enum cannot be null.");
+        }
+
+        T[] enumConstants = inputEnum.getDeclaringClass().getEnumConstants();
+        int currentIndex = inputEnum.ordinal();
+        int nextIndex = (currentIndex + 1) % enumConstants.length;
+
+
+        return enumConstants[nextIndex];
     }
 }
