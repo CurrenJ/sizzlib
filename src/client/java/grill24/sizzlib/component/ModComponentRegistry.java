@@ -346,7 +346,7 @@ public class ModComponentRegistry {
             final SetNewFieldValue<FabricClientCommandSource> setNewFieldValue;
 
             // If not read-only, set up our command arguments.
-            if(!optionAnnotation.readOnly()) {
+            if (!optionAnnotation.readOnly()) {
                 if (supportedActionArgumentTypes.containsKey(field.getType())) {
                     // Generic case :3 using our lovely SupportedCommandArgumentType infrastructure
                     SupportedCommandArgumentType supportedCommandArgumentType = supportedActionArgumentTypes.get(field.getType());
@@ -371,12 +371,12 @@ public class ModComponentRegistry {
                 try {
                     if (setterMethod != null) {
                         setterMethod.invoke(component.instance, value);
-                    } else if(!optionAnnotation.readOnly()) {
+                    } else if (!optionAnnotation.readOnly()) {
                         field.setAccessible(true);
                         field.set(component.instance, value);
                     }
 
-                    if(field.isAnnotationPresent(Persists.class) && component.instance instanceof IPersistable persistable) {
+                    if (field.isAnnotationPresent(Persists.class) && component.instance instanceof IPersistable persistable) {
                         PersistenceManager.save(persistable);
                     }
                 } catch (IllegalAccessException | InvocationTargetException e) {
