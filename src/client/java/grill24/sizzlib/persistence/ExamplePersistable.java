@@ -5,7 +5,6 @@ import grill24.sizzlib.component.Command;
 import grill24.sizzlib.component.CommandAction;
 import grill24.sizzlib.component.CommandOption;
 import grill24.sizzlib.component.ComponentUtility;
-import it.unimi.dsi.fastutil.Hash;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.BlockPos;
 
@@ -24,9 +23,13 @@ public class ExamplePersistable extends Persistable {
     @CommandOption
     protected SizzLibClient.MyEnum myEnumField;
 
-    @Persists(genericTypes = {BlockPos.class, Integer.class})
+    @Persists
     @CommandOption(readOnly = true)
     protected HashMap<BlockPos, Integer> myHashMapField;
+
+    @Persists
+    @CommandOption
+    protected BlockPos pos;
 
     public ExamplePersistable() {
         myHashMapField = new HashMap<>();
@@ -36,9 +39,9 @@ public class ExamplePersistable extends Persistable {
 
     @CommandAction
     public void populateMyHashMapField() {
-        myHashMapField.put(BlockPos.ORIGIN.up(1), 1);
-        myHashMapField.put(BlockPos.ORIGIN.up(2), 2);
-        myHashMapField.put(BlockPos.ORIGIN.up(3), 3);
+        myHashMapField.put(BlockPos.ORIGIN.up(1).toImmutable(), 1);
+        myHashMapField.put(BlockPos.ORIGIN.up(2).toImmutable(), 2);
+        myHashMapField.put(BlockPos.ORIGIN.up(3).toImmutable(), 3);
         PersistenceManager.save(this);
     }
 
