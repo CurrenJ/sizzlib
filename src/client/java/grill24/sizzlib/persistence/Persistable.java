@@ -15,6 +15,7 @@ public abstract class Persistable implements IPersistable {
         JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
 
         for (Field field : ComponentUtility.getFieldsWithAnnotation(this.getClass(), Persists.class)) {
+            field.setAccessible(true);
             Persists persistsAnnotation = field.getAnnotation(Persists.class);
             String key = persistsAnnotation.value().isEmpty() ? field.getName() : persistsAnnotation.value();
             JsonElement jsonElement = jsonObject.get(key);
@@ -35,6 +36,7 @@ public abstract class Persistable implements IPersistable {
         JsonObject jsonObject = new JsonObject();
 
         for (Field field : ComponentUtility.getFieldsWithAnnotation(this.getClass(), Persists.class)) {
+            field.setAccessible(true);
             Persists persistsAnnotation = field.getAnnotation(Persists.class);
             String key = persistsAnnotation.value().isEmpty() ? field.getName() : persistsAnnotation.value();
 
