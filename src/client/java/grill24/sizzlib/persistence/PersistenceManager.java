@@ -10,9 +10,9 @@ import java.nio.file.Paths;
 
 public class PersistenceManager {
     public static void save(IPersistable persistable) {
-        Path modDataDirectory = persistable.getFile().toPath();
-        if (!modDataDirectory.toFile().exists()) {
-            modDataDirectory.toFile().mkdirs();
+        File dir = new File(persistable.getFile().getAbsoluteFile().getParent());
+        if (!dir.exists()) {
+            dir.mkdirs();
         }
 
         try (FileWriter fileWriter = new FileWriter(persistable.getFile())) {
