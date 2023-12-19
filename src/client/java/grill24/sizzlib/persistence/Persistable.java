@@ -3,9 +3,14 @@ package grill24.sizzlib.persistence;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 import grill24.sizzlib.component.ComponentUtility;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Type;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 public abstract class Persistable implements IPersistable {
 
@@ -40,10 +45,18 @@ public abstract class Persistable implements IPersistable {
             Persists persistsAnnotation = field.getAnnotation(Persists.class);
             String key = persistsAnnotation.value().isEmpty() ? field.getName() : persistsAnnotation.value();
 
-            field.setAccessible(true);
             Object fieldValue = field.get(this);
             if (fieldValue != null) {
-                jsonObject.add(key, gson.toJsonTree(fieldValue));
+                Class<?> fieldType = field.getType();
+                if (Map.class.isAssignableFrom(fieldType) || List.class.isAssignableFrom(fieldType)) {
+                    // Oh-no! Java has compile-time type erasure on generics! Hacky workaround :)
+                    Type type = TypeToken.getParameterized(field.getType(), persistsAnnotation.genericTypes()).getType();
+                    jsonObject.add(key, gson.toJsonTree(fieldValue, type));
+                }
+                else {
+                    // Default behaviour.
+                    jsonObject.add(key, gson.toJsonTree(fieldValue, field.getType()));
+                }
             }
         }
 
