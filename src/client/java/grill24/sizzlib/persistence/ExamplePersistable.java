@@ -12,7 +12,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-@Command
+@Command(debug = true)
 public class ExamplePersistable extends Persistable {
 
     @Persists
@@ -28,7 +28,7 @@ public class ExamplePersistable extends Persistable {
     protected HashMap<BlockPos, Integer> myHashMapField;
 
     @Persists
-    @CommandOption
+    @CommandOption(debug = true)
     protected BlockPos pos;
 
     public ExamplePersistable() {

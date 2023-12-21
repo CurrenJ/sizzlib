@@ -9,7 +9,7 @@ import net.minecraft.command.argument.ItemStackArgument;
 import net.minecraft.item.Item;
 import net.minecraft.util.math.BlockPos;
 
-@Command("sizzLib")
+@Command(value = "sizzLib", debug = true)
 public class SizzLibClient implements ClientModInitializer {
 
     private static ModComponentRegistry modComponentRegistry;
@@ -33,6 +33,9 @@ public class SizzLibClient implements ClientModInitializer {
 
         modComponentRegistry = new ModComponentRegistry(SizzLibClient.class);
         modComponentRegistry.registerComponent(examplePersistable);
+
+        // Change this to see how the example component annotations work in-game.
+        modComponentRegistry.setDebug(false);
         modComponentRegistry.registerComponents();
     }
 

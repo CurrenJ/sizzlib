@@ -68,6 +68,8 @@ public class ModComponentRegistry {
 
     private int tickCounter;
 
+    private boolean isDebug;
+
     public static class CommandTreeNode {
         public String literal;
         public LiteralArgumentBuilder<FabricClientCommandSource> command;
@@ -171,13 +173,13 @@ public class ModComponentRegistry {
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             if (commandTreeRoot == null && commandRootComponent != null) {
-                LiteralArgumentBuilder<FabricClientCommandSource> rootCommand = buildCommandsFromAnnotations(commandRootComponent, registryAccess, commandTreeRoot, supportedArgumentTypes);
+                LiteralArgumentBuilder<FabricClientCommandSource> rootCommand = buildCommandsFromAnnotations(commandRootComponent, registryAccess, commandTreeRoot, supportedArgumentTypes, isDebug);
                 commandTreeRoot = new CommandTreeNode(ComponentUtility.getCommandKey(commandRootComponent.clazz), rootCommand);
             }
 
             for (ComponentDto component : this.components) {
-                if (ComponentUtility.hasCustomClassAnnotation(component.clazz, Command.class)) {
-                    LiteralArgumentBuilder<FabricClientCommandSource> command = buildCommandsFromAnnotations(component, registryAccess, commandTreeRoot, supportedArgumentTypes);
+                if (ComponentUtility.hasCustomClassAnnotation(component.clazz, Command.class, (clazz) -> !((Command) clazz.getAnnotation(Command.class)).debug() || isDebug)) {
+                    LiteralArgumentBuilder<FabricClientCommandSource> command = buildCommandsFromAnnotations(component, registryAccess, commandTreeRoot, supportedArgumentTypes, isDebug);
 
                     commandTreeRoot.command.then(command);
 
@@ -265,13 +267,13 @@ public class ModComponentRegistry {
     /**
      * Build command from an object component whose class has the {@link Command} annotation.
      */
-    private static LiteralArgumentBuilder<FabricClientCommandSource> buildCommandsFromAnnotations(ComponentDto component, CommandRegistryAccess commandRegistryAccess, CommandTreeNode commandRoot, HashMap<Class, SupportedCommandArgumentType> supportedActionArgumentTypes) {
+    private static LiteralArgumentBuilder<FabricClientCommandSource> buildCommandsFromAnnotations(ComponentDto component, CommandRegistryAccess commandRegistryAccess, CommandTreeNode commandRoot, HashMap<Class, SupportedCommandArgumentType> supportedActionArgumentTypes, boolean isDebug) {
         MinecraftClient client = MinecraftClient.getInstance();
 
         if (client != null) {
             Class<?> clazz = component.clazz;
 
-            if (ComponentUtility.hasCustomClassAnnotation(clazz, Command.class)) {
+            if (ComponentUtility.hasCustomClassAnnotation(clazz, Command.class, (c) -> !((Command) c.getAnnotation(Command.class)).debug() || isDebug)) {
                 String commandKey = ComponentUtility.getCommandKey(component.clazz);
 
                 com.mojang.brigadier.Command<FabricClientCommandSource> printInstance = (context) -> {
@@ -285,11 +287,11 @@ public class ModComponentRegistry {
 
                 LiteralArgumentBuilder<FabricClientCommandSource> command = ComponentUtility.getCommandOrElse(commandRoot, commandKey, (key) -> ClientCommandManager.literal(commandKey)).executes(printInstance);
 
-                for (Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromFields(component, commandRegistryAccess, supportedActionArgumentTypes)) {
+                for (Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromFields(component, commandRegistryAccess, supportedActionArgumentTypes, isDebug)) {
                     attachSubCommandToParentCommand(commandRoot, subCommandData.getA().parentKey(), command, subCommandData.getB());
                 }
 
-                for (Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromMethods(component, commandRegistryAccess, supportedActionArgumentTypes)) {
+                for (Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromMethods(component, commandRegistryAccess, supportedActionArgumentTypes, isDebug)) {
                     attachSubCommandToParentCommand(commandRoot, subCommandData.getA().parentKey(), command, subCommandData.getB());
                 }
 
@@ -311,11 +313,11 @@ public class ModComponentRegistry {
     /**
      * Build commands from fields with the {@link CommandOption} in an object's class.
      */
-    private static List<Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromFields(ComponentDto component, CommandRegistryAccess commandRegistryAccess, HashMap<Class, SupportedCommandArgumentType> supportedActionArgumentTypes) {
+    private static List<Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromFields(ComponentDto component, CommandRegistryAccess commandRegistryAccess, HashMap<Class, SupportedCommandArgumentType> supportedActionArgumentTypes, boolean isDebug) {
         Class<?> clazz = component.clazz;
 
         List<Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>>> commands = new ArrayList<>();
-        for (Field field : ComponentUtility.getFieldsWithAnnotation(clazz, CommandOption.class)) {
+        for (Field field : ComponentUtility.getFieldsWithAnnotation(clazz, CommandOption.class, (field) -> (!field.getAnnotation(CommandOption.class).debug() || isDebug))) {
             Class<?> fieldClass = field.getType();
             CommandOption optionAnnotation = field.getAnnotation(CommandOption.class);
             String optionKey = optionAnnotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(field.getName()) : optionAnnotation.value();
@@ -452,14 +454,14 @@ public class ModComponentRegistry {
     /**
      * Build commands from methods with the {@link CommandAction} in an object's class.
      */
-    private static List<Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromMethods(ComponentDto component, CommandRegistryAccess commandRegistryAccess, HashMap<Class, SupportedCommandArgumentType> supportedArgumentTypes) {
+    private static List<Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromMethods(ComponentDto component, CommandRegistryAccess commandRegistryAccess, HashMap<Class, SupportedCommandArgumentType> supportedArgumentTypes, boolean isDebug) {
         Class<?> clazz = component.clazz;
         MinecraftClient client = MinecraftClient.getInstance();
         assert client != null;
 
         // Build command arguments
         List<Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>>> commands = new ArrayList<>();
-        for (Method method : ComponentUtility.getMethodsWithAnnotation(clazz, CommandAction.class)) {
+        for (Method method : ComponentUtility.getMethodsWithAnnotation(clazz, CommandAction.class, (field) -> !field.getAnnotation(CommandAction.class).debug() || isDebug)) {
             CommandAction actionAnnotation = method.getAnnotation(CommandAction.class);
             Parameter[] parameters = method.getParameters();
             String actionKey = actionAnnotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(method.getName()) : actionAnnotation.value();
@@ -539,5 +541,9 @@ public class ModComponentRegistry {
                 e.printStackTrace();
             }
         }
+    }
+
+    public void setDebug(boolean isDebugEnabled) {
+        this.isDebug = isDebugEnabled;
     }
 }

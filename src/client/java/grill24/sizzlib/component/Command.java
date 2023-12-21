@@ -9,4 +9,6 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE})
 public @interface Command {
     String value() default "";
+
+    boolean debug() default false;
 }

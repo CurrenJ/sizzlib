@@ -12,5 +12,7 @@ public @interface CommandAction {
     String value() default "";
 
     String parentKey() default "";
+
+    boolean debug() default false;
 }
 

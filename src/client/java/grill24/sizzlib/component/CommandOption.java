@@ -32,5 +32,7 @@ public @interface CommandOption {
      * Make this field read-only. Can also do this by passing a setter method that doesn't do anything.
      */
     boolean readOnly() default false;
+
+    boolean debug() default false;
 }
 
