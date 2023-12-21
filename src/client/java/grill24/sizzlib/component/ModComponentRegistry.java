@@ -550,4 +550,12 @@ public class ModComponentRegistry {
     public void setDebug(boolean isDebugEnabled) {
         this.isDebug = isDebugEnabled;
     }
+
+    @Override
+    public String toString() {
+        if(commandTreeRoot != null)
+            return this.getClass().getName() + ": " + commandTreeRoot.literal;
+        else
+            return super.toString();
+    }
 }
