@@ -177,19 +177,20 @@ public class ModComponentRegistry {
                 commandTreeRoot = new CommandTreeNode(ComponentUtility.getCommandKey(commandRootComponent.clazz), rootCommand);
             }
 
-            for (ComponentDto component : this.components) {
-                if (ComponentUtility.hasCustomClassAnnotation(component.clazz, Command.class, (clazz) -> !((Command) clazz.getAnnotation(Command.class)).debug() || isDebug)) {
+            if (commandTreeRoot != null) {
+                for (ComponentDto component : this.components) {
                     LiteralArgumentBuilder<FabricClientCommandSource> command = buildCommandsFromAnnotations(component, registryAccess, commandTreeRoot, supportedArgumentTypes, isDebug);
 
-                    commandTreeRoot.command.then(command);
+                    if (command != null) {
+                        commandTreeRoot.command.then(command);
 
-                    String commandKey = ComponentUtility.getCommandKey(component.clazz);
-                    ;
-                    commandTreeRoot.children.put(commandKey, new CommandTreeNode(commandKey, command));
+                        String commandKey = ComponentUtility.getCommandKey(component.clazz);
+                        commandTreeRoot.children.put(commandKey, new CommandTreeNode(commandKey, command));
+                    }
                 }
-            }
 
-            dispatcher.register(commandTreeRoot.command);
+                dispatcher.register(commandTreeRoot.command);
+            }
         });
     }
 
@@ -273,7 +274,7 @@ public class ModComponentRegistry {
         if (client != null) {
             Class<?> clazz = component.clazz;
 
-            if (ComponentUtility.hasCustomClassAnnotation(clazz, Command.class, (c) -> !((Command) c.getAnnotation(Command.class)).debug() || isDebug)) {
+            if (ComponentUtility.hasCustomClassAnnotation(clazz, Command.class) && (!clazz.getAnnotation(Command.class).debug() || isDebug)) {
                 String commandKey = ComponentUtility.getCommandKey(component.clazz);
 
                 com.mojang.brigadier.Command<FabricClientCommandSource> printInstance = (context) -> {

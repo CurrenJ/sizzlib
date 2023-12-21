@@ -17,8 +17,8 @@ import java.util.function.Function;
 
 public class ComponentUtility {
 
-    public static boolean hasCustomClassAnnotation(Class<?> clazz, Class<? extends Annotation> annotationClass, Function<Class, Boolean> isValid) {
-        return clazz.isAnnotationPresent(annotationClass) && isValid.apply(clazz);
+    public static boolean hasCustomClassAnnotation(Class<?> clazz, Class<? extends Annotation> annotationClass) {
+        return clazz.isAnnotationPresent(annotationClass);
     }
 
     public static String convertSnakeToCamel(String snakeCase) {
@@ -141,7 +141,7 @@ public class ComponentUtility {
     }
 
     public static String getCommandKey(Class<?> clazz) {
-        if (hasCustomClassAnnotation(clazz, Command.class, (c) -> true)) {
+        if (hasCustomClassAnnotation(clazz, Command.class)) {
             Command annotation = clazz.getAnnotation(Command.class);
             return annotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(clazz.getSimpleName()) : annotation.value();
         }
