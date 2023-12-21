@@ -8,6 +8,7 @@ import com.google.gson.reflect.TypeToken;
 import grill24.sizzlib.component.ComponentUtility;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
@@ -15,7 +16,7 @@ public abstract class Persistable implements IPersistable {
 
     @Override
     public void fromJson(String jsonString) throws IllegalAccessException {
-        Gson gson = new GsonBuilder().enableComplexMapKeySerialization().create();
+        Gson gson = new GsonBuilder().enableComplexMapKeySerialization().excludeFieldsWithModifiers(Modifier.TRANSIENT).create();
         JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
 
         for (Field field : ComponentUtility.getFieldsWithAnnotation(this.getClass(), Persists.class)) {
@@ -43,7 +44,7 @@ public abstract class Persistable implements IPersistable {
 
     @Override
     public String toJson() throws IllegalAccessException {
-        Gson gson = new GsonBuilder().enableComplexMapKeySerialization().create();
+        Gson gson = new GsonBuilder().enableComplexMapKeySerialization().excludeFieldsWithModifiers(Modifier.TRANSIENT).create();
         JsonObject jsonObject = new JsonObject();
 
         for (Field field : ComponentUtility.getFieldsWithAnnotation(this.getClass(), Persists.class)) {
