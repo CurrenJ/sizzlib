@@ -174,7 +174,10 @@ public class ModComponentRegistry {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             if (commandTreeRoot == null && commandRootComponent != null) {
                 LiteralArgumentBuilder<FabricClientCommandSource> rootCommand = buildCommandsFromAnnotations(commandRootComponent, registryAccess, commandTreeRoot, supportedArgumentTypes, isDebug);
-                commandTreeRoot = new CommandTreeNode(ComponentUtility.getCommandKey(commandRootComponent.clazz), rootCommand);
+
+                if (rootCommand != null) {
+                    commandTreeRoot = new CommandTreeNode(ComponentUtility.getCommandKey(commandRootComponent.clazz), rootCommand);
+                }
             }
 
             if (commandTreeRoot != null) {
