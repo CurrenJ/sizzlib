@@ -35,7 +35,11 @@ public abstract class Persistable implements IPersistable {
             JsonElement jsonElement = jsonObject.get(key);
 
             if (jsonElement != null) {
-                if (field.getGenericType() instanceof ParameterizedType parameterizedType) {
+                if(IPersistable.class.isAssignableFrom(field.getType())) {
+                    // A teensy tiny bit of recursion to deal with holding generic fields inside of classes. 
+                    IPersistable persistable = (IPersistable) field.get(this);
+                    persistable.fromJson(jsonElement.getAsString());
+                } else if (field.getGenericType() instanceof ParameterizedType parameterizedType) {
                     // LOOK AT THIS CODE! It's beautiful. Allows us to access generic types (like K,V in a Map) at runtime via reflection.
                     Type[] genericTypes = parameterizedType.getActualTypeArguments();
                     Type type = TypeToken.getParameterized(field.getType(), genericTypes).getType();
@@ -52,7 +56,7 @@ public abstract class Persistable implements IPersistable {
     }
 
     @Override
-    public String toJson() throws IllegalAccessException {
+    public JsonObject toJson() throws IllegalAccessException {
         Gson gson = new GsonBuilder()
                 .registerTypeAdapter(BlockPos.class, new BlockPosTypeAdapter())
                 .registerTypeAdapter(Item.class, new ItemTypeAdapter())
@@ -68,7 +72,11 @@ public abstract class Persistable implements IPersistable {
 
             Object fieldValue = field.get(this);
             if (fieldValue != null) {
-                if (field.getGenericType() instanceof ParameterizedType parameterizedType) {
+                System.out.println(field.getName());
+                if(IPersistable.class.isAssignableFrom(field.getType())) {
+                    IPersistable persistable = (IPersistable) field.get(this);
+                    jsonObject.add(key, persistable.toJson());
+                } else if (field.getGenericType() instanceof ParameterizedType parameterizedType) {
                     Type[] genericTypes = parameterizedType.getActualTypeArguments();
                     Type type = TypeToken.getParameterized(field.getType(), genericTypes).getType();
                     jsonObject.add(key, gson.toJsonTree(fieldValue, type));
@@ -78,7 +86,7 @@ public abstract class Persistable implements IPersistable {
             }
         }
 
-        return jsonObject.toString();
+        return jsonObject;
     }
 
     @Override
