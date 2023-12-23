@@ -1,10 +1,9 @@
 package grill24.sizzlib.persistence;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
+import com.google.gson.internal.bind.MapTypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
+import com.sun.jdi.InvalidTypeException;
 import grill24.sizzlib.component.ComponentUtility;
 import grill24.sizzlib.persistence.adapter.BlockPosTypeAdapter;
 import grill24.sizzlib.persistence.adapter.ItemTypeAdapter;
@@ -15,17 +14,16 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 public abstract class Persistable implements IPersistable {
 
     @Override
     public void fromJson(String jsonString) throws IllegalAccessException {
-        Gson gson = new GsonBuilder()
-                .registerTypeAdapter(BlockPos.class, new BlockPosTypeAdapter())
-                .registerTypeAdapter(Item.class, new ItemTypeAdapter())
-                .enableComplexMapKeySerialization()
-                .excludeFieldsWithModifiers(Modifier.TRANSIENT)
-                .create();
+        Gson gson = getGsonBuilder().create();
         JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
 
         for (Field field : ComponentUtility.getFieldsWithAnnotation(this.getClass(), Persists.class)) {
@@ -35,18 +33,8 @@ public abstract class Persistable implements IPersistable {
             JsonElement jsonElement = jsonObject.get(key);
 
             if (jsonElement != null) {
-                if(IPersistable.class.isAssignableFrom(field.getType())) {
-                    // A teensy tiny bit of recursion to deal with holding generic fields inside of classes. 
-                    IPersistable persistable = (IPersistable) field.get(this);
-                    persistable.fromJson(jsonElement.getAsString());
-                } else if (field.getGenericType() instanceof ParameterizedType parameterizedType) {
-                    // LOOK AT THIS CODE! It's beautiful. Allows us to access generic types (like K,V in a Map) at runtime via reflection.
-                    Type[] genericTypes = parameterizedType.getActualTypeArguments();
-                    Type type = TypeToken.getParameterized(field.getType(), genericTypes).getType();
-                    setField(field, gson.fromJson(jsonElement, type));
-                } else {
-                    setField(field, gson.fromJson(jsonElement, field.getType()));
-                }
+                Type type = getTypeToken(field).getType();
+                setField(field, gson.fromJson(jsonElement, type));
             }
         }
     }
@@ -57,12 +45,7 @@ public abstract class Persistable implements IPersistable {
 
     @Override
     public JsonObject toJson() throws IllegalAccessException {
-        Gson gson = new GsonBuilder()
-                .registerTypeAdapter(BlockPos.class, new BlockPosTypeAdapter())
-                .registerTypeAdapter(Item.class, new ItemTypeAdapter())
-                .enableComplexMapKeySerialization()
-                .excludeFieldsWithModifiers(Modifier.TRANSIENT)
-                .create();
+        Gson gson = getGsonBuilder().create();
         JsonObject jsonObject = new JsonObject();
 
         for (Field field : ComponentUtility.getFieldsWithAnnotation(this.getClass(), Persists.class)) {
@@ -72,21 +55,29 @@ public abstract class Persistable implements IPersistable {
 
             Object fieldValue = field.get(this);
             if (fieldValue != null) {
-                System.out.println(field.getName());
-                if(IPersistable.class.isAssignableFrom(field.getType())) {
-                    IPersistable persistable = (IPersistable) field.get(this);
-                    jsonObject.add(key, persistable.toJson());
-                } else if (field.getGenericType() instanceof ParameterizedType parameterizedType) {
-                    Type[] genericTypes = parameterizedType.getActualTypeArguments();
-                    Type type = TypeToken.getParameterized(field.getType(), genericTypes).getType();
-                    jsonObject.add(key, gson.toJsonTree(fieldValue, type));
-                } else {
-                    jsonObject.add(key, gson.toJsonTree(fieldValue, field.getType()));
-                }
+                Type type = getTypeToken(field).getType();
+                jsonObject.add(key, gson.toJsonTree(fieldValue, type));
             }
         }
 
         return jsonObject;
+    }
+
+    private static GsonBuilder getGsonBuilder() {
+        GsonBuilder gsonBuilder = new GsonBuilder()
+                .registerTypeAdapter(BlockPos.class, new BlockPosTypeAdapter())
+                .registerTypeHierarchyAdapter(Item.class, new ItemTypeAdapter())
+                .enableComplexMapKeySerialization()
+                .excludeFieldsWithModifiers(Modifier.TRANSIENT);
+        return gsonBuilder;
+    }
+
+    private static TypeToken getTypeToken(Field field) {
+        if(field.getGenericType() instanceof ParameterizedType parameterizedType) {
+            Type[] genericTypes = parameterizedType.getActualTypeArguments();
+            return TypeToken.getParameterized(field.getType(), genericTypes);
+        }
+        return TypeToken.get(field.getType());
     }
 
     @Override

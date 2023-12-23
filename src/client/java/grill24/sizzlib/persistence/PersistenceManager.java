@@ -16,7 +16,7 @@ public class PersistenceManager {
         }
 
         try (FileWriter fileWriter = new FileWriter(persistable.getFile())) {
-            fileWriter.write(persistable.toJson().getAsString());
+            fileWriter.write(persistable.toJson().toString());
         } catch (Exception e) {
             e.printStackTrace();
         }

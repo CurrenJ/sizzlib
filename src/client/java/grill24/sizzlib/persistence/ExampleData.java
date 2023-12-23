@@ -6,16 +6,13 @@ import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 
 import java.io.File;
+import java.util.HashMap;
 
-public class ExampleData extends Persistable {
-    @Persists
+public class ExampleData {
     public Item item = Items.ACACIA_BOAT;
     public int testInt = 6;
 
-    public ExampleData() {}
+    public HashMap<Item, Integer> map = new HashMap<>() {{ put(Items.CACTUS, 1); }};
 
-    @Override
-    public File getFile() {
-        return null;
-    }
+    public ExampleData() {}
 }
