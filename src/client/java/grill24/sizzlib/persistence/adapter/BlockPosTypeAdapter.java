@@ -2,7 +2,6 @@ package grill24.sizzlib.persistence.adapter;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import net.minecraft.util.math.BlockPos;
 
@@ -23,7 +22,7 @@ public class BlockPosTypeAdapter extends TypeAdapter<BlockPos> {
         int x = 0, y = 0, z = 0;
 
         in.beginObject();
-        while(in.hasNext()) {
+        while (in.hasNext()) {
             switch (in.nextName()) {
                 case "x":
                     x = in.nextInt();

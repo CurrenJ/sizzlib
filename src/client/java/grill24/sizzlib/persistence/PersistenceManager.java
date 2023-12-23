@@ -109,7 +109,7 @@ public class PersistenceManager {
     }
 
     private static TypeToken getTypeToken(Field field) {
-        if(field.getGenericType() instanceof ParameterizedType parameterizedType) {
+        if (field.getGenericType() instanceof ParameterizedType parameterizedType) {
             Type[] genericTypes = parameterizedType.getActualTypeArguments();
             return TypeToken.getParameterized(field.getType(), genericTypes);
         }

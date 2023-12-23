@@ -12,7 +12,6 @@ import grill24.sizzlib.component.accessor.GetCommandArgumentValue;
 import grill24.sizzlib.component.accessor.GetFieldValue;
 import grill24.sizzlib.component.accessor.SetNewFieldValue;
 import grill24.sizzlib.persistence.IFileProvider;
-import grill24.sizzlib.persistence.IPersistable;
 import grill24.sizzlib.persistence.PersistenceManager;
 import grill24.sizzlib.persistence.Persists;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -551,7 +550,7 @@ public class ModComponentRegistry {
 
     @Override
     public String toString() {
-        if(commandTreeRoot != null)
+        if (commandTreeRoot != null)
             return this.getClass().getName() + ": " + commandTreeRoot.literal;
         else
             return super.toString();

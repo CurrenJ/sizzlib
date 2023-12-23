@@ -210,11 +210,11 @@ public class ComponentUtility {
                 str = PersistenceManager.toJson(obj, clazz).toString();
             }
 
-            if(str.isEmpty() || str.equals("{}")) {
+            if (str.isEmpty() || str.equals("{}")) {
                 str = ComponentUtility.toStringStatic(clazz);
             }
 
-            if((str.isEmpty() || str.equals("{}")) && obj != null) {
+            if ((str.isEmpty() || str.equals("{}")) && obj != null) {
                 str = obj.toString();
             }
         } catch (IllegalAccessException e) {
