@@ -6,6 +6,7 @@ import grill24.sizzlib.component.CommandAction;
 import grill24.sizzlib.component.CommandOption;
 import grill24.sizzlib.component.ComponentUtility;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.item.Item;
 import net.minecraft.util.math.BlockPos;
 
 import java.io.File;
@@ -30,6 +31,10 @@ public class ExamplePersistable extends Persistable {
     @Persists
     @CommandOption(debug = true)
     protected BlockPos pos;
+
+    @Persists
+    @CommandOption
+    protected Item item;
 
     public ExamplePersistable() {
         myHashMapField = new HashMap<>();

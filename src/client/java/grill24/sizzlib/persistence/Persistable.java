@@ -6,6 +6,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import grill24.sizzlib.component.ComponentUtility;
+import grill24.sizzlib.persistence.adapter.BlockPosTypeAdapter;
+import grill24.sizzlib.persistence.adapter.ItemTypeAdapter;
+import net.minecraft.item.Item;
+import net.minecraft.util.math.BlockPos;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -16,7 +20,12 @@ public abstract class Persistable implements IPersistable {
 
     @Override
     public void fromJson(String jsonString) throws IllegalAccessException {
-        Gson gson = new GsonBuilder().enableComplexMapKeySerialization().excludeFieldsWithModifiers(Modifier.TRANSIENT).create();
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(BlockPos.class, new BlockPosTypeAdapter())
+                .registerTypeAdapter(Item.class, new ItemTypeAdapter())
+                .enableComplexMapKeySerialization()
+                .excludeFieldsWithModifiers(Modifier.TRANSIENT)
+                .create();
         JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
 
         for (Field field : ComponentUtility.getFieldsWithAnnotation(this.getClass(), Persists.class)) {
@@ -44,7 +53,12 @@ public abstract class Persistable implements IPersistable {
 
     @Override
     public String toJson() throws IllegalAccessException {
-        Gson gson = new GsonBuilder().enableComplexMapKeySerialization().excludeFieldsWithModifiers(Modifier.TRANSIENT).create();
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(BlockPos.class, new BlockPosTypeAdapter())
+                .registerTypeAdapter(Item.class, new ItemTypeAdapter())
+                .enableComplexMapKeySerialization()
+                .excludeFieldsWithModifiers(Modifier.TRANSIENT)
+                .create();
         JsonObject jsonObject = new JsonObject();
 
         for (Field field : ComponentUtility.getFieldsWithAnnotation(this.getClass(), Persists.class)) {
