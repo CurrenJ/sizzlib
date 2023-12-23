@@ -36,8 +36,13 @@ public class ExamplePersistable extends Persistable {
     @CommandOption
     protected Item item;
 
+    @Persists
+    @CommandOption
+    protected ExampleData exampleData;
+
     public ExamplePersistable() {
         myHashMapField = new HashMap<>();
+        exampleData = new ExampleData();
 
         PersistenceManager.load(this);
     }
