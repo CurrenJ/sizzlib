@@ -31,6 +31,7 @@ public class ItemTypeAdapter extends TypeAdapter<Item> {
                     break;
             }
         }
+        in.endObject();
 
         return Registries.ITEM.get(id);
     }
