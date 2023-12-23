@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Command(debug = true)
-public class ExamplePersistable extends Persistable {
+public class ExamplePersistable implements IFileProvider {
 
     @Persists
     @CommandOption

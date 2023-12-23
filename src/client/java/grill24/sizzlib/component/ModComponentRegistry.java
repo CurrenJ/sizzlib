@@ -11,6 +11,7 @@ import grill24.sizzlib.IDefaultPosArgumentMixin;
 import grill24.sizzlib.component.accessor.GetCommandArgumentValue;
 import grill24.sizzlib.component.accessor.GetFieldValue;
 import grill24.sizzlib.component.accessor.SetNewFieldValue;
+import grill24.sizzlib.persistence.IFileProvider;
 import grill24.sizzlib.persistence.IPersistable;
 import grill24.sizzlib.persistence.PersistenceManager;
 import grill24.sizzlib.persistence.Persists;
@@ -281,10 +282,7 @@ public class ModComponentRegistry {
                 String commandKey = ComponentUtility.getCommandKey(component.clazz);
 
                 com.mojang.brigadier.Command<FabricClientCommandSource> printInstance = (context) -> {
-                    if (component.instance != null)
-                        ComponentUtility.print(context, component.instance.toString());
-                    else
-                        ComponentUtility.print(context, ComponentUtility.toStringStatic(clazz));
+                    ComponentUtility.print(context, ComponentUtility.getDebugString(component.instance, component.clazz));
                     return 1;
                 };
 
@@ -382,8 +380,8 @@ public class ModComponentRegistry {
                         field.set(component.instance, value);
                     }
 
-                    if (field.isAnnotationPresent(Persists.class) && component.instance instanceof IPersistable persistable) {
-                        PersistenceManager.save(persistable);
+                    if (field.isAnnotationPresent(Persists.class) && component.instance instanceof IFileProvider fileProvider) {
+                        PersistenceManager.save(fileProvider);
                     }
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     e.printStackTrace();
@@ -407,7 +405,7 @@ public class ModComponentRegistry {
 
             // By default, print the value of the field when no specific option is provided.
             com.mojang.brigadier.Command<FabricClientCommandSource> noOptionProvidedFunc = (context -> {
-                ComponentUtility.print(context, optionKey + "=" + getFieldValue.run(component.instance));
+                ComponentUtility.print(context, ComponentUtility.getDebugString(getFieldValue.run(component.instance), component.clazz));
                 return 1;
             });
 
