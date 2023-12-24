@@ -404,8 +404,12 @@ public class ModComponentRegistry {
 
             // By default, print the value of the field when no specific option is provided.
             com.mojang.brigadier.Command<FabricClientCommandSource> noOptionProvidedFunc = (context -> {
-                ComponentUtility.print(context, ComponentUtility.getDebugString(getFieldValue.run(component.instance), component.clazz));
-                return 1;
+                Object value = getFieldValue.run(component.instance);
+                if(value != null) {
+                    ComponentUtility.print(context, ComponentUtility.getDebugString(value, value.getClass()));
+                    return 1;
+                }
+                return -1;
             });
 
             if (field.getType() == boolean.class) {
