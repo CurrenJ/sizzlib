@@ -117,22 +117,23 @@ public class PersistenceManager {
         return TypeToken.get(field.getType());
     }
 
+    public static String getDebugStringForField(Field field, Object value) {
+        TypeToken typeToken = getTypeToken(field);
+        return getGsonBuilder().create().toJson(value, typeToken.getType());
+    }
+
     public static String getDebugString(Object obj, Class<?> clazz) {
         String str = "";
-        try {
-            if (str.isEmpty() || str.equals("{}")) {
-                str = getGsonBuilder().create().toJson(obj);
-            }
+        if (str.isEmpty() || str.equals("{}")) {
+            str = ComponentUtility.toStringStatic(clazz);
+        }
 
-            if (obj != null) {
-                str = toJson(obj, clazz).toString();
-            }
+        if (str.isEmpty() || str.equals("{}")) {
+            str = getGsonBuilder().create().toJson(obj);
+        }
 
-            if ((str.isEmpty() || str.equals("{}")) && obj != null) {
-                str = obj.toString();
-            }
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+        if ((str.isEmpty() || str.equals("{}")) && obj != null) {
+            str = obj.toString();
         }
 
         return str;

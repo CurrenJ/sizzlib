@@ -405,7 +405,7 @@ public class ModComponentRegistry {
             com.mojang.brigadier.Command<FabricClientCommandSource> noOptionProvidedFunc = (context -> {
                 Object value = getFieldValue.run(component.instance);
                 if (value != null) {
-                    ComponentUtility.print(context, PersistenceManager.getDebugString(value, value.getClass()));
+                    ComponentUtility.print(context, PersistenceManager.getDebugStringForField(field, value));
                     return 1;
                 }
                 return -1;
