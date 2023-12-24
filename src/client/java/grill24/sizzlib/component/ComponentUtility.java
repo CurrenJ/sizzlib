@@ -13,6 +13,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.function.Function;
 
@@ -104,6 +105,13 @@ public class ComponentUtility {
         if (!correctParameters)
             System.out.println("WARNING: Incorrect parameters for screen tick method: " + method.getName());
         return correctParameters;
+    }
+
+    public static Field[] getFieldsExcludingTransient(Class<?> componentClass) {
+        Field[] fields = componentClass.getDeclaredFields();
+        return Arrays.stream(fields)
+                .filter(field -> !Modifier.isTransient(field.getModifiers()))
+                .toArray(Field[]::new);
     }
 
     public static Field[] getFieldsWithAnnotation(Class<?> componentClass, Class<? extends Annotation> annotationClass) {
@@ -206,12 +214,12 @@ public class ComponentUtility {
     public static String getDebugString(Object obj, Class<?> clazz) {
         String str = "";
         try {
-            if (obj != null) {
-                str = PersistenceManager.toJson(obj, clazz).toString();
-            }
-
             if (str.isEmpty() || str.equals("{}")) {
                 str = ComponentUtility.toStringStatic(clazz);
+            }
+
+            if (obj != null) {
+                str = PersistenceManager.toJson(obj, clazz).toString();
             }
 
             if ((str.isEmpty() || str.equals("{}")) && obj != null) {

@@ -13,7 +13,6 @@ import grill24.sizzlib.component.accessor.GetFieldValue;
 import grill24.sizzlib.component.accessor.SetNewFieldValue;
 import grill24.sizzlib.persistence.IFileProvider;
 import grill24.sizzlib.persistence.PersistenceManager;
-import grill24.sizzlib.persistence.Persists;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -379,7 +378,7 @@ public class ModComponentRegistry {
                         field.set(component.instance, value);
                     }
 
-                    if (field.isAnnotationPresent(Persists.class) && component.instance instanceof IFileProvider fileProvider) {
+                    if (component.instance instanceof IFileProvider fileProvider) {
                         PersistenceManager.save(fileProvider);
                     }
                 } catch (IllegalAccessException | InvocationTargetException e) {

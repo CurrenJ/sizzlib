@@ -16,27 +16,21 @@ import java.util.Map;
 @Command(debug = true)
 public class ExamplePersistable implements IFileProvider {
 
-    @Persists
     @CommandOption
     protected String myStringField;
 
-    @Persists
     @CommandOption
     protected SizzLibClient.MyEnum myEnumField;
 
-    @Persists
     @CommandOption(readOnly = true)
     protected HashMap<BlockPos, Integer> myHashMapField;
 
-    @Persists
     @CommandOption(debug = true)
     protected BlockPos pos;
 
-    @Persists
     @CommandOption
     protected Item item;
 
-    @Persists
     @CommandOption
     protected ExampleData exampleData;
 

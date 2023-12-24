@@ -61,10 +61,9 @@ public class PersistenceManager {
         Gson gson = getGsonBuilder().create();
         JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
 
-        for (Field field : ComponentUtility.getFieldsWithAnnotation(clazz, Persists.class)) {
+        for (Field field : ComponentUtility.getFieldsExcludingTransient(clazz)) {
             field.setAccessible(true);
-            Persists persistsAnnotation = field.getAnnotation(Persists.class);
-            String key = persistsAnnotation.value().isEmpty() ? field.getName() : persistsAnnotation.value();
+            String key = field.getName();
             JsonElement jsonElement = jsonObject.get(key);
 
             if (jsonElement != null) {
@@ -82,10 +81,9 @@ public class PersistenceManager {
         Gson gson = getGsonBuilder().create();
         JsonObject jsonObject = new JsonObject();
 
-        for (Field field : ComponentUtility.getFieldsWithAnnotation(clazz, Persists.class)) {
+        for (Field field : ComponentUtility.getFieldsExcludingTransient(clazz)) {
             field.setAccessible(true);
-            Persists persistsAnnotation = field.getAnnotation(Persists.class);
-            String key = persistsAnnotation.value().isEmpty() ? field.getName() : persistsAnnotation.value();
+            String key = field.getName();
 
             Object fieldValue = field.get(obj);
             if (fieldValue != null) {
