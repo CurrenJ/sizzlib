@@ -280,7 +280,7 @@ public class ModComponentRegistry {
                 String commandKey = ComponentUtility.getCommandKey(component.clazz);
 
                 com.mojang.brigadier.Command<FabricClientCommandSource> printInstance = (context) -> {
-                    ComponentUtility.print(context, ComponentUtility.getDebugString(component.instance, component.clazz));
+                    ComponentUtility.print(context, PersistenceManager.getDebugString(component.instance, component.clazz));
                     return 1;
                 };
 
@@ -405,7 +405,7 @@ public class ModComponentRegistry {
             com.mojang.brigadier.Command<FabricClientCommandSource> noOptionProvidedFunc = (context -> {
                 Object value = getFieldValue.run(component.instance);
                 if (value != null) {
-                    ComponentUtility.print(context, ComponentUtility.getDebugString(value, value.getClass()));
+                    ComponentUtility.print(context, PersistenceManager.getDebugString(value, value.getClass()));
                     return 1;
                 }
                 return -1;

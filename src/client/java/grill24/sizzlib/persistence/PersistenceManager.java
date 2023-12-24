@@ -116,5 +116,26 @@ public class PersistenceManager {
         }
         return TypeToken.get(field.getType());
     }
+
+    public static String getDebugString(Object obj, Class<?> clazz) {
+        String str = "";
+        try {
+            if (str.isEmpty() || str.equals("{}")) {
+                str = getGsonBuilder().create().toJson(obj);
+            }
+
+            if (obj != null) {
+                str = toJson(obj, clazz).toString();
+            }
+
+            if ((str.isEmpty() || str.equals("{}")) && obj != null) {
+                str = obj.toString();
+            }
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+
+        return str;
+    }
 }
 

@@ -11,9 +11,11 @@ public class BlockPosTypeAdapter extends TypeAdapter<BlockPos> {
     @Override
     public void write(JsonWriter out, BlockPos value) throws IOException {
         out.beginObject();
-        out.name("x").value(value.getX());
-        out.name("y").value(value.getY());
-        out.name("z").value(value.getZ());
+        if (value != null) {
+            out.name("x").value(value.getX());
+            out.name("y").value(value.getY());
+            out.name("z").value(value.getZ());
+        }
         out.endObject();
     }
 

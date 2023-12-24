@@ -3,7 +3,6 @@ package grill24.sizzlib.component;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import grill24.sizzlib.persistence.PersistenceManager;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
@@ -209,26 +208,5 @@ public class ComponentUtility {
 
 
         return enumConstants[nextIndex];
-    }
-
-    public static String getDebugString(Object obj, Class<?> clazz) {
-        String str = "";
-        try {
-            if (str.isEmpty() || str.equals("{}")) {
-                str = ComponentUtility.toStringStatic(clazz);
-            }
-
-            if (obj != null) {
-                str = PersistenceManager.toJson(obj, clazz).toString();
-            }
-
-            if ((str.isEmpty() || str.equals("{}")) && obj != null) {
-                str = obj.toString();
-            }
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-
-        return str;
     }
 }

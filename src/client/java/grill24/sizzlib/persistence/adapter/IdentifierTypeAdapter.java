@@ -11,7 +11,9 @@ public class IdentifierTypeAdapter extends TypeAdapter<Identifier> {
     @Override
     public void write(JsonWriter out, Identifier value) throws IOException {
         out.beginObject();
-        out.name("identifier").value(value.toString());
+        if (value != null) {
+            out.name("identifier").value(value.toString());
+        }
         out.endObject();
     }
 

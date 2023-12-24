@@ -13,7 +13,9 @@ public class ItemTypeAdapter extends TypeAdapter<Item> {
     @Override
     public void write(JsonWriter out, Item value) throws IOException {
         out.beginObject();
-        out.name("id").value(String.valueOf(Registries.ITEM.getId(value)));
+        if (value != null) {
+            out.name("id").value(String.valueOf(Registries.ITEM.getId(value)));
+        }
         out.endObject();
     }
 
