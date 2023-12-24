@@ -7,9 +7,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import grill24.sizzlib.component.ComponentUtility;
 import grill24.sizzlib.persistence.adapter.BlockPosTypeAdapter;
+import grill24.sizzlib.persistence.adapter.IdentifierTypeAdapter;
 import grill24.sizzlib.persistence.adapter.ItemTypeAdapter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.Item;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 
 import java.io.File;
@@ -102,6 +104,7 @@ public class PersistenceManager {
     private static GsonBuilder getGsonBuilder() {
         GsonBuilder gsonBuilder = new GsonBuilder()
                 .registerTypeAdapter(BlockPos.class, new BlockPosTypeAdapter())
+                .registerTypeAdapter(Identifier.class, new IdentifierTypeAdapter())
                 .registerTypeHierarchyAdapter(Item.class, new ItemTypeAdapter())
                 .enableComplexMapKeySerialization()
                 .excludeFieldsWithModifiers(Modifier.TRANSIENT);
