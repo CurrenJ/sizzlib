@@ -176,7 +176,7 @@ public class ModComponentRegistry {
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             if (commandTreeRoot == null && commandRootComponent != null) {
-                LiteralArgumentBuilder<FabricClientCommandSource> rootCommand = buildCommandsFromAnnotations(commandRootComponent, registryAccess, commandTreeRoot, supportedArgumentTypes, modRootLiteral, isDebug);
+                LiteralArgumentBuilder<FabricClientCommandSource> rootCommand = buildCommandsFromAnnotations(commandRootComponent, registryAccess);
 
                 if (rootCommand != null) {
                     commandTreeRoot = new CommandTreeNode(ComponentUtility.getCommandKey(commandRootComponent.clazz), rootCommand);
@@ -185,7 +185,7 @@ public class ModComponentRegistry {
 
             if (commandTreeRoot != null) {
                 for (ComponentDto component : this.components) {
-                    LiteralArgumentBuilder<FabricClientCommandSource> command = buildCommandsFromAnnotations(component, registryAccess, commandTreeRoot, supportedArgumentTypes, modRootLiteral, isDebug);
+                    LiteralArgumentBuilder<FabricClientCommandSource> command = buildCommandsFromAnnotations(component, registryAccess);
                 }
 
                 for (CommandTreeNode child : commandTreeRoot.children.values()) {
@@ -270,7 +270,7 @@ public class ModComponentRegistry {
     /**
      * Build command from an object component whose class has the {@link Command} annotation.
      */
-    private static LiteralArgumentBuilder<FabricClientCommandSource> buildCommandsFromAnnotations(ComponentDto component, CommandRegistryAccess commandRegistryAccess, CommandTreeNode commandRoot, HashMap<Class, SupportedCommandArgumentType> supportedActionArgumentTypes, String modRootLiteral, boolean isDebug) {
+    private LiteralArgumentBuilder<FabricClientCommandSource> buildCommandsFromAnnotations(ComponentDto component, CommandRegistryAccess commandRegistryAccess) {
         MinecraftClient client = MinecraftClient.getInstance();
 
         if (client != null) {
@@ -284,15 +284,17 @@ public class ModComponentRegistry {
                     return 1;
                 };
 
-                CommandTreeNode commandNode = ComponentUtility.getChildCommandNodeOrElse(commandRoot, commandKey, (key) -> ClientCommandManager.literal(commandKey));
+                CommandTreeNode commandNode = ComponentUtility.getChildCommandNodeOrElse(commandTreeRoot, commandKey, (key) -> ClientCommandManager.literal(commandKey));
                 LiteralArgumentBuilder<FabricClientCommandSource> command = commandNode.command.executes(printInstance);
+                if (commandTreeRoot == null)
+                    commandTreeRoot = commandNode;
 
-                for (Pair<String[], LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromFields(component, commandRegistryAccess, supportedActionArgumentTypes, modRootLiteral, isDebug)) {
-                    attachSubCommandToParentCommand(commandRoot, commandNode, subCommandData.getA(), subCommandData.getB());
+                for (Pair<String[], LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromFields(component, commandRegistryAccess)) {
+                    attachSubCommandToParentCommand(subCommandData.getA(), subCommandData.getB());
                 }
 
-                for (Pair<String[], LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromMethods(component, commandRegistryAccess, supportedActionArgumentTypes, modRootLiteral, isDebug)) {
-                    attachSubCommandToParentCommand(commandRoot, commandNode, subCommandData.getA(), subCommandData.getB());
+                for (Pair<String[], LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromMethods(component, commandRegistryAccess)) {
+                    attachSubCommandToParentCommand(subCommandData.getA(), subCommandData.getB());
                 }
 
                 return command;
@@ -301,8 +303,8 @@ public class ModComponentRegistry {
         return null;
     }
 
-    private static void attachSubCommandToParentCommand(CommandTreeNode commandRoot, CommandTreeNode defaultParentNode, String[] commandLiteralPath, LiteralArgumentBuilder<FabricClientCommandSource> subCommand) {
-        CommandTreeNode parentCommand = commandRoot == null ? defaultParentNode : commandRoot;
+    private void attachSubCommandToParentCommand(String[] commandLiteralPath, LiteralArgumentBuilder<FabricClientCommandSource> subCommand) {
+        CommandTreeNode parentCommand = commandTreeRoot;
         for (int i = 0; i < commandLiteralPath.length - 1; i++) {
             String literal = commandLiteralPath[i];
             parentCommand = ComponentUtility.getChildCommandNodeOrElse(parentCommand, literal, (key) -> ClientCommandManager.literal(literal));
@@ -313,7 +315,7 @@ public class ModComponentRegistry {
     /**
      * Build commands from fields with the {@link CommandOption} in an object's class.
      */
-    private static List<Pair<String[], LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromFields(ComponentDto component, CommandRegistryAccess commandRegistryAccess, HashMap<Class, SupportedCommandArgumentType> supportedActionArgumentTypes, String modRootLiteral, boolean isDebug) {
+    private List<Pair<String[], LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromFields(ComponentDto component, CommandRegistryAccess commandRegistryAccess) {
         Class<?> clazz = component.clazz;
 
         List<Pair<String[], LiteralArgumentBuilder<FabricClientCommandSource>>> commands = new ArrayList<>();
@@ -351,9 +353,9 @@ public class ModComponentRegistry {
 
             // If not read-only, set up our command arguments.
             if (!optionAnnotation.readOnly()) {
-                if (supportedActionArgumentTypes.containsKey(field.getType())) {
+                if (supportedArgumentTypes.containsKey(field.getType())) {
                     // Generic case :3 using our lovely SupportedCommandArgumentType infrastructure
-                    SupportedCommandArgumentType supportedCommandArgumentType = supportedActionArgumentTypes.get(field.getType());
+                    SupportedCommandArgumentType supportedCommandArgumentType = supportedArgumentTypes.get(field.getType());
                     argumentType = supportedCommandArgumentType.getArgumentType.apply(commandRegistryAccess);
                     getCommandArgumentValue = supportedCommandArgumentType.getArgumentValue();
                 } else if (fieldClass.isEnum()) {
@@ -446,7 +448,7 @@ public class ModComponentRegistry {
     /**
      * Build commands from methods with the {@link CommandAction} in an object's class.
      */
-    private static List<Pair<String[], LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromMethods(ComponentDto component, CommandRegistryAccess commandRegistryAccess, HashMap<Class, SupportedCommandArgumentType> supportedArgumentTypes, String modRootLiteral, boolean isDebug) {
+    private List<Pair<String[], LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromMethods(ComponentDto component, CommandRegistryAccess commandRegistryAccess) {
         Class<?> clazz = component.clazz;
         MinecraftClient client = MinecraftClient.getInstance();
         assert client != null;
