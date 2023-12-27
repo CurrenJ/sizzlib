@@ -103,10 +103,10 @@ public class ComponentUtility {
         return correctParameters;
     }
 
-    public static Field[] getFieldsExcludingTransient(Class<?> componentClass) {
+    public static Field[] getFieldsToPersist(Class<?> componentClass) {
         Field[] fields = componentClass.getDeclaredFields();
         return Arrays.stream(fields)
-                .filter(field -> !Modifier.isTransient(field.getModifiers()))
+                .filter(field -> !Modifier.isTransient(field.getModifiers()) && !Modifier.isStatic(field.getModifiers()))
                 .toArray(Field[]::new);
     }
 

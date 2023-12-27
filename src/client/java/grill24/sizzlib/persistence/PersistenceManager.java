@@ -61,7 +61,7 @@ public class PersistenceManager {
         Gson gson = getGsonBuilder().create();
         JsonObject jsonObject = gson.fromJson(jsonString, JsonObject.class);
 
-        for (Field field : ComponentUtility.getFieldsExcludingTransient(clazz)) {
+        for (Field field : ComponentUtility.getFieldsToPersist(clazz)) {
             field.setAccessible(true);
             String key = field.getName();
             JsonElement jsonElement = jsonObject.get(key);
@@ -81,7 +81,7 @@ public class PersistenceManager {
         Gson gson = getGsonBuilder().create();
         JsonObject jsonObject = new JsonObject();
 
-        for (Field field : ComponentUtility.getFieldsExcludingTransient(clazz)) {
+        for (Field field : ComponentUtility.getFieldsToPersist(clazz)) {
             field.setAccessible(true);
             String key = field.getName();
 

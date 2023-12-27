@@ -34,8 +34,8 @@ public class SizzLibClient implements ClientModInitializer {
         modComponentRegistry = new ModComponentRegistry(SizzLibClient.class);
         modComponentRegistry.registerComponent(examplePersistable);
 
-        // Change this to see how the example component annotations work in-game.
-        modComponentRegistry.setDebug(true);
+        // FOR DEVS: Change this to see how the example component annotations work in-game.
+        modComponentRegistry.setDebug(false);
         modComponentRegistry.registerComponents();
     }
 
