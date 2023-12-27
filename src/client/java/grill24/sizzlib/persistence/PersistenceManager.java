@@ -105,7 +105,7 @@ public class PersistenceManager {
                 .registerTypeAdapter(Identifier.class, new IdentifierTypeAdapter())
                 .registerTypeHierarchyAdapter(Item.class, new ItemTypeAdapter())
                 .enableComplexMapKeySerialization()
-                .excludeFieldsWithModifiers(Modifier.TRANSIENT);
+                .excludeFieldsWithModifiers(Modifier.TRANSIENT, Modifier.STATIC);
         return gsonBuilder;
     }
 
