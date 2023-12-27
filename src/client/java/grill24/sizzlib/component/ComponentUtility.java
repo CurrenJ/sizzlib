@@ -9,10 +9,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
 import java.util.Arrays;
 import java.util.function.Function;
 
@@ -156,17 +153,18 @@ public class ComponentUtility {
         return "";
     }
 
-    public static LiteralArgumentBuilder<FabricClientCommandSource> getCommandOrElse(ModComponentRegistry.CommandTreeNode commandTreeRoot, String commandKey, LiteralArgumentBuilderSupplier value) {
-        LiteralArgumentBuilder<FabricClientCommandSource> command;
+    public static ModComponentRegistry.CommandTreeNode getChildCommandNodeOrElse(ModComponentRegistry.CommandTreeNode commandTreeRoot, String commandKey, LiteralArgumentBuilderSupplier value) {
         if (commandTreeRoot != null && commandTreeRoot.getChildNode(commandKey).isPresent())
-            return commandTreeRoot.getChildNode(commandKey).get().command;
-        else {
+            return commandTreeRoot.getChildNode(commandKey).get();
+        else if (commandTreeRoot != null && commandTreeRoot.literal.equals(commandKey)) {
+            return commandTreeRoot;
+        } else {
             LiteralArgumentBuilder<FabricClientCommandSource> newCommand = value.run(commandKey);
+            ModComponentRegistry.CommandTreeNode node = new ModComponentRegistry.CommandTreeNode(commandKey, newCommand);
             if (commandTreeRoot != null) {
-                ModComponentRegistry.CommandTreeNode node = new ModComponentRegistry.CommandTreeNode(commandKey, newCommand);
                 commandTreeRoot.children.put(commandKey, node);
             }
-            return newCommand;
+            return node;
         }
     }
 
@@ -208,5 +206,27 @@ public class ComponentUtility {
 
 
         return enumConstants[nextIndex];
+    }
+
+    public static String[] tokenizeCommandString(String commandLiteral, String modRootLiteral, Member member) {
+        String literal = commandLiteral;
+
+        // Standardize the format of the returned literal path, i.e.
+        // "" -> "[modRootLiteral] [defaultMemberString]"
+        // "" -> "sizzLib examplePersistable"
+
+        String[] temp = literal.split("\\s+");
+
+        if (!literal.isBlank() && temp.length == 1)
+            literal = ComponentUtility.convertDeclarationToCamel(ComponentUtility.getCommandKey(member.getDeclaringClass()) + " " + commandLiteral);
+
+        if (literal.isBlank())
+            literal = ComponentUtility.convertDeclarationToCamel(ComponentUtility.getCommandKey(member.getDeclaringClass()) + " " + member.getName());
+
+        if (!literal.startsWith(modRootLiteral))
+            literal = modRootLiteral + " " + literal;
+
+        String[] tokenizedCommandLiteralPath = literal.split("\\s+");
+        return tokenizedCommandLiteralPath;
     }
 }

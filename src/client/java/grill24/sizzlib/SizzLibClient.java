@@ -35,12 +35,12 @@ public class SizzLibClient implements ClientModInitializer {
         modComponentRegistry.registerComponent(examplePersistable);
 
         // Change this to see how the example component annotations work in-game.
-        modComponentRegistry.setDebug(false);
+        modComponentRegistry.setDebug(true);
         modComponentRegistry.registerComponents();
     }
 
     @CommandAction
-    public static void item(CommandContext<FabricClientCommandSource> commandContext, Item item) {
+    public static void itemAction(CommandContext<FabricClientCommandSource> commandContext, Item item) {
         ComponentUtility.print(commandContext, item.toString());
     }
 

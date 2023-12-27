@@ -14,11 +14,6 @@ public @interface CommandOption {
     String value() default "";
 
     /**
-     * If specified, overrides the parent command literal specified in the {@link Command} tag.
-     */
-    String parentKey() default "";
-
-    /**
      * Specify a custom setter, otherwise reflection will be used to set the field.
      */
     String setter() default "";

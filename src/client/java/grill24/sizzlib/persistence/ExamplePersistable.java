@@ -28,10 +28,10 @@ public class ExamplePersistable implements IFileProvider {
     @CommandOption(debug = true)
     protected BlockPos pos;
 
-    @CommandOption
+    @CommandOption("newRoot item")
     protected Item item;
 
-    @CommandOption
+    @CommandOption("exampleData")
     protected ExampleData exampleData;
 
     public ExamplePersistable() {
