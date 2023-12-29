@@ -5,6 +5,8 @@ import grill24.sizzlib.component.*;
 import grill24.sizzlib.persistence.ExamplePersistable;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.command.argument.ItemStackArgument;
 import net.minecraft.item.Item;
 import net.minecraft.util.math.BlockPos;
@@ -40,7 +42,7 @@ public class SizzLibClient implements ClientModInitializer {
     }
 
     @CommandAction
-    public static void itemAction(CommandContext<FabricClientCommandSource> commandContext, Item item) {
+    public static void itemArgument(CommandContext<FabricClientCommandSource> commandContext, Item item) {
         ComponentUtility.print(commandContext, item.toString());
     }
 
@@ -55,13 +57,23 @@ public class SizzLibClient implements ClientModInitializer {
     }
 
     @CommandAction
-    public static void blockPos(CommandContext<FabricClientCommandSource> commandContext, BlockPos blockPos) {
+    public static void blockPosArgument(CommandContext<FabricClientCommandSource> commandContext, BlockPos blockPos) {
         ComponentUtility.print(commandContext, blockPos.toString());
     }
 
     @CommandAction
-    public static void myEnumAction(CommandContext<FabricClientCommandSource> commandContext, MyEnum myEnumInstance) {
+    public static void myEnumArgument(CommandContext<FabricClientCommandSource> commandContext, MyEnum myEnumInstance) {
         ComponentUtility.print(commandContext, myEnumInstance.toString());
+    }
+
+    @CommandAction
+    public static void myBlockArgument(CommandContext<FabricClientCommandSource> commandContext, Block block) {
+        ComponentUtility.print(commandContext, block.getName().getLiteralString());
+    }
+
+    @CommandAction
+    public static void myBlockStateArgument(CommandContext<FabricClientCommandSource> commandContext, BlockState blockState) {
+        ComponentUtility.print(commandContext, blockState.toString());
     }
 
     @StaticToString

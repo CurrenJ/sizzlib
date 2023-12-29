@@ -18,6 +18,8 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -112,6 +114,20 @@ public class ModComponentRegistry {
 
         supportedArgumentTypes = new HashMap<>();
 
+        // Block
+        addSupportedActionTargetType(new SupportedCommandArgumentType(
+                Block.class,
+                (commandRegistryAccess) -> BlockStateArgumentType.blockState(commandRegistryAccess),
+                (commandContext, key) -> BlockStateArgumentType.getBlockState(commandContext, key).getBlockState().getBlock()
+        ));
+
+        // Block State
+        addSupportedActionTargetType(new SupportedCommandArgumentType(
+                BlockState.class,
+                (commandRegistryAccess) -> BlockStateArgumentType.blockState(commandRegistryAccess),
+                (commandContext, key) -> BlockStateArgumentType.getBlockState(commandContext, key).getBlockState()
+        ));
+
         // ItemStackArgument
         addSupportedActionTargetType(new SupportedCommandArgumentType(
                 ItemStackArgument.class,
@@ -122,9 +138,7 @@ public class ModComponentRegistry {
         addSupportedActionTargetType(new SupportedCommandArgumentType(
                 Item.class,
                 ItemStackArgumentType::itemStack,
-                (commandContext, key) -> {
-                    return ItemStackArgumentType.getItemStackArgument(commandContext, key).getItem();
-                }));
+                (commandContext, key) -> ItemStackArgumentType.getItemStackArgument(commandContext, key).getItem()));
 
         // String
         addSupportedActionTargetType(new SupportedCommandArgumentType(
